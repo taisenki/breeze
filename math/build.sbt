@@ -1,51 +1,8 @@
-organization := "org.scalanlp"
-
 name := "breeze"
 
-scalaVersion := Common.scalaVersion
-
-crossScalaVersions  := Common.crossScalaVersions
+Common.commonSettings
 
 addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full)
-
-publishMavenStyle := true
-
-publishTo <<= version { (v: String) =>
-  val nexus = "https://oss.sonatype.org/"
-  if (v.trim.endsWith("SNAPSHOT"))
-    Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
-}
-
-publishArtifact in Test := false
-
-pomIncludeRepository := { _ => false }
-
-pomExtra := (
-  <url>http://scalanlp.org/</url>
-  <licenses>
-    <license>
-      <name>Apache 2</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
-  <scm>
-    <url>git@github.com:scalanlp/breeze.git</url>
-    <connection>scm:git:git@github.com:scalanlp/breeze.git</connection>
-  </scm>
-  <developers>
-    <developer>
-      <id>dlwh</id>
-      <name>David Hall</name>
-      <url>http://cs.berkeley.edu/~dlwh/</url>
-    </developer>
-  </developers>)
-
-scalacOptions ++= Seq("-deprecation","-language:_")//, "-no-specialization")
-
-javacOptions ++= Seq("-target", "1.6", "-source","1.6")
 
 libraryDependencies ++= Seq(
   "com.github.fommil.netlib" % "core" % "1.1.2",
@@ -53,50 +10,53 @@ libraryDependencies ++= Seq(
   "net.sf.opencsv" % "opencsv" % "2.3",
   "com.github.rwl" % "jtransforms" % "2.4.0",
   "org.apache.commons" % "commons-math3" % "3.2",
-  "org.spire-math" %% "spire" % "0.11.0",
+  "org.spire-math" %% "spire" % "0.13.0",
+  "com.chuusai" %% "shapeless" % "2.3.2",
   "org.slf4j" % "slf4j-api" % "1.7.5",
-  "org.scalacheck" %% "scalacheck" % "1.11.3" % "test",
-  "org.scalatest" %% "scalatest" % "2.1.3" % "test",
-  "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.1" % "test",
   "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.0-beta9" % "test",
   "org.apache.logging.log4j" % "log4j-core" % "2.0-beta9" % "test",
   "org.apache.logging.log4j" % "log4j-api" % "2.0-beta9" % "test"
 )
 
-libraryDependencies <<= (scalaVersion, libraryDependencies) { (sv, deps) =>
+libraryDependencies := {
+  val sv = scalaVersion.value
+  val deps = libraryDependencies.value
   sv match {
     case x if x startsWith "2.10" =>
-      deps ++ Seq(
-          "com.chuusai" %% "shapeless" % "2.3.1",
-          compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
-          )
-    case x if x.startsWith("2.11") =>
-      (deps :+ ("com.chuusai" %% "shapeless" % "2.3.1" ))
+      deps :+ compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
     case _ =>
       deps
   }
 }
 
+libraryDependencies := {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, scalaMajor)) if scalaMajor >= 12 =>
+      libraryDependencies.value ++ Seq(
+        "org.scala-lang.modules" %% "scala-xml" % "1.0.6" % "test"
+      )
+    case Some((2, scalaMajor)) if scalaMajor >= 11 =>
+      libraryDependencies.value ++ Seq(
+        "org.scala-lang.modules" %% "scala-xml" % "1.0.6" % "test"
+      )
+    case _ =>
+      libraryDependencies.value ++ Seq()
+  }
+}
+
 // see https://github.com/typesafehub/scalalogging/issues/23
 testOptions in Test += Tests.Setup(classLoader =>
-try {
-  classLoader
-    .loadClass("org.slf4j.LoggerFactory")
-    .getMethod("getLogger", classLoader.loadClass("java.lang.String"))
-    .invoke(null, "ROOT")
-    } catch {
-      case e: Exception =>
-    }
+  try {
+    classLoader
+      .loadClass("org.slf4j.LoggerFactory")
+      .getMethod("getLogger", classLoader.loadClass("java.lang.String"))
+      .invoke(null, "ROOT")
+  } catch {
+    case _: Exception =>
+  }
 )
 
-resolvers ++= Seq(
-    Resolver.mavenLocal,
-    Resolver.sonatypeRepo("snapshots"),
-    Resolver.sonatypeRepo("releases"),
-    Resolver.typesafeRepo("releases")
-    )
+fork in Compile := true
 
-testOptions in Test += Tests.Argument("-oDF")
-
-//fork in Test := true
 javaOptions := Seq("-Xmx4g")
+

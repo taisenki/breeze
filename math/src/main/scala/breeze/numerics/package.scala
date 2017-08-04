@@ -661,6 +661,38 @@ package object numerics {
   }
 
   /**
+   * The logit (inverse sigmoid) function: -log((1/x) - 1)
+   *
+   */
+  object logit extends UFunc with MappingUFunc {
+    implicit object logitImplInt extends Impl[Int, Double] {
+      def apply(x:Int) = -scala.math.log((1d/(x.toDouble))-1d)
+    }
+    implicit object logitImplDouble extends Impl[Double, Double] {
+      def apply(x:Double) = -scala.math.log((1d/x)-1d)
+    }
+    implicit object logitImplFloat extends Impl[Float, Float] {
+      def apply(x:Float) = -scala.math.log((1f/x)-1f).toFloat
+    }
+  }
+
+  /**
+    * The Relu function: max(0, x)
+    *
+    * @see https://en.wikipedia.org/wiki/Rectifier_(neural_networks)
+    *
+    */
+  object relu extends UFunc with MappingUFunc {
+
+    implicit object reluImplDouble extends Impl[Double, Double] {
+      def apply(x: Double) = max(0d, x)
+    }
+    implicit object reluImplInt extends Impl[Int, Int] {
+      def apply(x: Int) = max(0, x)
+    }
+  }
+
+  /**
    * Computes the polynomial P(x) with coefficients given in the passed in array.
    * coefs(i) is the coef for the x_i term.
    */
